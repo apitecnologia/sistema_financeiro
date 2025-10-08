@@ -29,10 +29,16 @@
         <label for="cliente_nome">Nome do Cliente:</label>
         <input type="text" id="cliente_nome" name="cliente_nome" required>
 
-        <label for="valor">Valor Total:</label>
-        <input type="number" id="valor" name="valor" step="0.01" required>
+        <label for="valor_display">Valor Total:</label>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span style="font-size: 1em;">R$</span>
+            <!-- Campo visível para o usuário com a máscara -->
+            <input type="text" id="valor_display" placeholder="123,45" required style="flex-grow: 1;" inputmode="decimal">
+            <!-- Campo oculto que envia o valor numérico para o servidor -->
+            <input type="hidden" id="valor" name="valor">
+        </div>
 
-        <label for="forma_pagamento">Forma de Pagamento:</label>
+        <label for="forma_pagamento" style="margin-top: 10px;">Forma de Pagamento:</label>
         <select id="forma_pagamento" name="forma_pagamento" required>
             <option value="A Vista">À Vista</option>
             <option value="A Prazo">À Prazo</option>
@@ -77,7 +83,7 @@
                         <td>{{ pedido.numero_pedido }}</td>
                         <td>{{ pedido.cliente_nome }}</td>
                         <td>{{ pedido.forma_pagamento }}</td>
-                        <td>R$ {{ "%.2f"|format(pedido.valor_total) }}</td>
+                        <td>R$ {{ "%.2f"|format(pedido.valor_total)|replace('.', ',') }}</td>
                         <td><a href="{{ url_for('excluir_pedido', id=pedido.id) }}" class="button-link delete-button">Excluir Pedido</a></td>
                         <td>
                             <button class="toggle-parcelas button-link secondary-button" data-pedido-id="{{ pedido.id }}">Ver detalhes</button>
@@ -88,7 +94,7 @@
                             <td colspan="6">
                                 <div class="parcela-detail-box">
                                     <p><strong>Detalhe da Parcela {{ parcela.parcela_num }}/{{ pedido.num_parcelas }}</strong></p>
-                                    <p>Valor: R$ {{ "%.2f"|format(parcela.valor) }}</p>
+                                    <p>Valor: R$ {{ "%.2f"|format(parcela.valor)|replace('.', ',') }}</p>
                                     <p>Vencimento: {{ parcela.data_vencimento.strftime('%d/%m/%Y') }}</p>
                                     <p>Status: <span class="status-badge {% if parcela.status == 'Baixado' %}baixado-badge{% else %}pendente-badge{% endif %}">{{ parcela.status }}</span></p>
                                     
@@ -115,6 +121,26 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {
+        // --- Script para máscara de moeda ---
+        const valorDisplay = document.getElementById('valor_display');
+        const valorHidden = document.getElementById('valor');
+
+        valorDisplay.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value) {
+                let numberValue = parseInt(value, 10) / 100;
+                let formattedValue = numberValue.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                e.target.value = formattedValue;
+                valorHidden.value = numberValue.toFixed(2);
+            } else {
+                e.target.value = '';
+                valorHidden.value = '';
+            }
+        });
+
         // Lógica para o formulário de novo pedido
         const formaPagamentoSelect = document.getElementById('forma_pagamento');
         const parcelasContainer = document.getElementById('parcelas_container');
@@ -134,18 +160,10 @@
         toggleButtons.forEach(button => {
             const pedidoId = button.dataset.pedidoId;
             const parcelas = document.querySelectorAll(`.parcela-row[data-pedido-id="${pedidoId}"]`);
-            
-            parcelas.forEach(parcela => {
-                parcela.style.display = 'none';
-            });
-
+            parcelas.forEach(parcela => parcela.style.display = 'none');
             button.addEventListener('click', () => {
                 let isExpanded = button.textContent === 'Esconder detalhes';
-
-                parcelas.forEach(parcela => {
-                    parcela.style.display = isExpanded ? 'none' : 'table-row';
-                });
-
+                parcelas.forEach(parcela => parcela.style.display = isExpanded ? 'none' : 'table-row');
                 button.textContent = isExpanded ? 'Ver detalhes' : 'Esconder detalhes';
             });
         });
@@ -157,21 +175,12 @@
 
         if (expandAllBtn && collapseAllBtn) {
             expandAllBtn.addEventListener('click', () => {
-                allParcelaRows.forEach(row => {
-                    row.style.display = 'table-row';
-                });
-                allToggleButtons.forEach(button => {
-                    button.textContent = 'Esconder detalhes';
-                });
+                allParcelaRows.forEach(row => row.style.display = 'table-row');
+                allToggleButtons.forEach(button => button.textContent = 'Esconder detalhes');
             });
-
             collapseAllBtn.addEventListener('click', () => {
-                allParcelaRows.forEach(row => {
-                    row.style.display = 'none';
-                });
-                allToggleButtons.forEach(button => {
-                    button.textContent = 'Ver detalhes';
-                });
+                allParcelaRows.forEach(row => row.style.display = 'none');
+                allToggleButtons.forEach(button => button.textContent = 'Ver detalhes');
             });
         }
     });
