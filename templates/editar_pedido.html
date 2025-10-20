@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Pedido</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1 class="header-text">Editar Pedido</h1>
+    <a href="{{ url_for('pedidos') }}" class="back-link">← Voltar para Pedidos</a>
+    <hr>
+
+    <form method="POST" class="form-section">
+        <label for="numero_pedido">Número do Pedido:</label>
+        <input type="text" id="numero_pedido" name="numero_pedido" value="{{ pedido.numero_pedido }}" required>
+
+        <label for="cliente_nome">Nome do Cliente:</label>
+        <input type="text" id="cliente_nome" name="cliente_nome" value="{{ pedido.cliente_nome }}" required>
+        
+        <label for="valor_display">Valor Total:</label>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span style="font-size: 1em;">R$</span>
+            <input type="text" id="valor_display" placeholder="123,45" value="{{ '%.2f'|format(pedido.valor_total)|replace('.', ',') }}" required style="flex-grow: 1;" inputmode="decimal">
+            <input type="hidden" id="valor" name="valor" value="{{ pedido.valor_total }}">
+        </div>
+
+        <div style="margin-top: 20px; background-color: #f0f0f0; padding: 15px; border-radius: 8px;">
+            <h4>Informações de Pagamento (Não editáveis)</h4>
+            <p><strong>Forma de Pagamento:</strong> {{ pedido.forma_pagamento }}</p>
+            <p><strong>Número de Parcelas:</strong> {{ pedido.num_parcelas }}x</p>
+        </div>
+        
+        <button type="submit">Salvar Alterações</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // --- Script para máscara de moeda ---
+        const valorDisplay = document.getElementById('valor_display');
+        const valorHidden = document.getElementById('valor');
+
+        valorDisplay.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value) {
+                let numberValue = parseInt(value, 10) / 100;
+                let formattedValue = numberValue.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                e.target.value = formattedValue;
+                valorHidden.value = numberValue.toFixed(2);
+            } else {
+                e.target.value = '';
+                valorHidden.value = '';
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
