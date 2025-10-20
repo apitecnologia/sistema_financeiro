@@ -202,6 +202,35 @@ def retirar_baixa_parcela(id):
     parcela.status = 'Pendente'
     db.session.commit()
     return redirect(request.referrer or url_for('pedidos'))
+    
+# --- NOVA ROTA PARA EDITAR PEDIDO ---
+@app.route('/editar_pedido/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_pedido(id):
+    pedido_a_editar = Pedido.query.get_or_404(id)
+    
+    # Verifica se alguma parcela já foi baixada. Se sim, impede a edição.
+    if any(p.status == 'Baixado' for p in pedido_a_editar.parcelas):
+        flash('Não é possível editar pedidos com parcelas já baixadas.', 'error')
+        return redirect(url_for('pedidos'))
+        
+    if request.method == 'POST':
+        # Atualiza os dados do pedido
+        pedido_a_editar.numero_pedido = request.form['numero_pedido']
+        pedido_a_editar.cliente_nome = request.form['cliente_nome']
+        pedido_a_editar.valor_total = float(request.form['valor'])
+        
+        # Recalcula o valor de cada parcela com base no novo valor total
+        novo_valor_parcela = pedido_a_editar.valor_total / pedido_a_editar.num_parcelas
+        for parcela in pedido_a_editar.parcelas:
+            parcela.valor = novo_valor_parcela
+            
+        db.session.commit()
+        flash('Pedido atualizado com sucesso!', 'success')
+        return redirect(url_for('pedidos'))
+        
+    return render_template('editar_pedido.html', pedido=pedido_a_editar)
+
 
 @app.route('/excluir_pedido/<int:id>')
 @login_required
@@ -413,8 +442,8 @@ def delete_user(user_id):
 # O comando 'db.create_all()' será executado pelo build.sh.
 # O servidor será iniciado pelo Gunicorn, conforme o Start Command no Render.
 #
-# with app.app_context():
+#with app.app_context():
 #     db.create_all()
 #
-# if __name__ == '__main__':
+#if __name__ == '__main__':
 #     app.run(debug=True)
