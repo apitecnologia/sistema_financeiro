@@ -26,13 +26,25 @@
             <input type="hidden" id="valor" name="valor" value="{{ pedido.valor_total }}">
         </div>
 
-        <div style="margin-top: 20px; background-color: #f0f0f0; padding: 15px; border-radius: 8px;">
-            <h4>Informações de Pagamento (Não editáveis)</h4>
-            <p><strong>Forma de Pagamento:</strong> {{ pedido.forma_pagamento }}</p>
-            <p><strong>Número de Parcelas:</strong> {{ pedido.num_parcelas }}x</p>
+        <label for="forma_pagamento" style="margin-top: 10px;">Forma de Pagamento:</label>
+        <select id="forma_pagamento" name="forma_pagamento" required>
+            <option value="A Vista" {% if pedido.forma_pagamento == 'A Vista' %}selected{% endif %}>À Vista</option>
+            <option value="A Prazo" {% if pedido.forma_pagamento == 'A Prazo' %}selected{% endif %}>À Prazo</option>
+        </select>
+
+        <div id="parcelas_container" style="display: none;">
+            <label for="num_parcelas">Número de Parcelas:</label>
+            <select id="num_parcelas" name="num_parcelas">
+                {% for i in range(1, 13) %}
+                <option value="{{ i }}" {% if i == pedido.num_parcelas %}selected{% endif %}>{{ i }}x</option>
+                {% endfor %}
+            </select>
         </div>
         
-        <button type="submit">Salvar Alterações</button>
+        <label for="data_vencimento">Data de Vencimento (1ª Parcela):</label>
+        <input type="date" id="data_vencimento" name="data_vencimento" value="{{ data_vencimento_inicial.isoformat() }}" required>
+
+        <button type="submit" style="margin-top: 20px;">Salvar Alterações</button>
     </form>
 </div>
 
@@ -57,6 +69,24 @@
                 valorHidden.value = '';
             }
         });
+
+        // --- Script para mostrar/ocultar parcelas (copiado de pedidos.html) ---
+        const formaPagamentoSelect = document.getElementById('forma_pagamento');
+        const parcelasContainer = document.getElementById('parcelas_container');
+        
+        function toggleParcelas() {
+            if (formaPagamentoSelect.value === 'A Prazo') {
+                parcelasContainer.style.display = 'block';
+            } else {
+                parcelasContainer.style.display = 'none';
+            }
+        }
+        
+        // Adiciona o listener
+        formaPagamentoSelect.addEventListener('change', toggleParcelas);
+        
+        // Executa a função na carga da página para definir o estado inicial correto
+        toggleParcelas();
     });
 </script>
 
