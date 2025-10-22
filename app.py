@@ -203,7 +203,7 @@ def retirar_baixa_parcela(id):
     db.session.commit()
     return redirect(request.referrer or url_for('pedidos'))
     
-# --- NOVA ROTA PARA EDITAR PEDIDO ---
+# --- ROTA EDITAR PEDIDO MODIFICADA ---
 @app.route('/editar_pedido/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_pedido(id):
@@ -215,21 +215,45 @@ def editar_pedido(id):
         return redirect(url_for('pedidos'))
         
     if request.method == 'POST':
-        # Atualiza os dados do pedido
+        # 1. Atualiza os dados principais do pedido
         pedido_a_editar.numero_pedido = request.form['numero_pedido']
         pedido_a_editar.cliente_nome = request.form['cliente_nome']
         pedido_a_editar.valor_total = float(request.form['valor'])
+        pedido_a_editar.forma_pagamento = request.form['forma_pagamento']
+        pedido_a_editar.num_parcelas = int(request.form.get('num_parcelas') or 1)
         
-        # Recalcula o valor de cada parcela com base no novo valor total
-        novo_valor_parcela = pedido_a_editar.valor_total / pedido_a_editar.num_parcelas
-        for parcela in pedido_a_editar.parcelas:
-            parcela.valor = novo_valor_parcela
+        # 2. Exclui TODAS as parcelas antigas associadas a este pedido
+        Parcela.query.filter_by(pedido_id=pedido_a_editar.id).delete()
+        
+        # 3. Cria as novas parcelas com base nos dados do formulário
+        # (Lógica idêntica à da rota /pedidos)
+        data_vencimento = date.fromisoformat(request.form['data_vencimento'])
+        parcela_valor = pedido_a_editar.valor_total / pedido_a_editar.num_parcelas
+        
+        for i in range(pedido_a_editar.num_parcelas):
+            data_parcela = add_months(data_vencimento, i)
+            nova_parcela = Parcela(
+                valor=parcela_valor,
+                data_vencimento=data_parcela,
+                parcela_num=i + 1,
+                pedido_id=pedido_a_editar.id,
+                status='Pendente'
+            )
+            db.session.add(nova_parcela)
             
         db.session.commit()
         flash('Pedido atualizado com sucesso!', 'success')
         return redirect(url_for('pedidos'))
         
-    return render_template('editar_pedido.html', pedido=pedido_a_editar)
+    # GET Request: Busca a data da primeira parcela para pré-preencher o formulário
+    primeira_parcela = Parcela.query.filter_by(pedido_id=id, parcela_num=1).first()
+    data_vencimento_inicial = primeira_parcela.data_vencimento if primeira_parcela else date.today()
+    
+    return render_template(
+        'editar_pedido.html', 
+        pedido=pedido_a_editar, 
+        data_vencimento_inicial=data_vencimento_inicial
+    )
 
 
 @app.route('/excluir_pedido/<int:id>')
@@ -443,7 +467,7 @@ def delete_user(user_id):
 # O servidor será iniciado pelo Gunicorn, conforme o Start Command no Render.
 #
 #with app.app_context():
-#     db.create_all()
+#    db.create_all()
 #
 #if __name__ == '__main__':
-#     app.run(debug=True)
+#   app.run(debug=True)
