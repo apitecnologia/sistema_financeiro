@@ -59,6 +59,11 @@
 
     <h2 class="sub-header-text">Pedidos Lançados</h2>
     {% if pedidos %}
+        
+        <div style="margin-bottom: 15px;">
+            <label for="search-input" style="font-weight: 600;">Buscar Pedido:</label>
+            <input type="text" id="search-input" placeholder="Digite o nº do pedido, nome do cliente, etc..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem;">
+        </div>
         <div class="export-button-container" style="display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
             <button id="expand-all-btn" class="button-link secondary-button">Expandir Todos</button>
             <button id="collapse-all-btn" class="button-link secondary-button">Minimizar Todos</button>
@@ -186,6 +191,46 @@
                 allToggleButtons.forEach(button => button.textContent = 'Ver detalhes');
             });
         }
+
+        // --- NOVO: LÓGICA DO CAMPO DE BUSCA ---
+        const searchInput = document.getElementById('search-input');
+        const allPedidoRows = document.querySelectorAll('tr.pedido-row');
+
+        if (searchInput && allPedidoRows.length > 0) {
+            searchInput.addEventListener('input', () => {
+                const filter = searchInput.value.toLowerCase();
+
+                allPedidoRows.forEach(pedidoRow => {
+                    // Pega o ID do pedido para encontrar suas parcelas
+                    const pedidoId = pedidoRow.querySelector('.toggle-parcelas').dataset.pedidoId;
+                    const allParcelasForThisPedido = document.querySelectorAll(`.parcela-row[data-pedido-id="${pedidoId}"]`);
+                    
+                    // Pega todo o texto da linha principal do pedido
+                    const rowText = pedidoRow.textContent.toLowerCase();
+                    
+                    if (rowText.includes(filter)) {
+                        // Se o texto bater com o filtro, mostra a linha principal
+                        pedidoRow.style.display = 'table-row';
+                    } else {
+                        // Se não bater, esconde a linha principal
+                        pedidoRow.style.display = 'none';
+                        
+                        // E TAMBÉM esconde todas as parcelas filhas
+                        allParcelasForThisPedido.forEach(parcela => {
+                            parcela.style.display = 'none';
+                        });
+
+                        // Opcional: Reseta o botão para 'Ver detalhes'
+                        const toggleBtn = pedidoRow.querySelector('.toggle-parcelas');
+                        if (toggleBtn) {
+                            toggleBtn.textContent = 'Ver detalhes';
+                        }
+                    }
+                });
+            });
+        }
+        // --- FIM DA LÓGICA DE BUSCA ---
+
     });
 </script>
 
